@@ -626,7 +626,7 @@ TimeGraph = function() {
                 ctx.fillText(series.label, x+2, pos);
             } else {
                 pos2 += ctx.textHeight;
-                tw = ctx.measureText(series.label);
+                tw = ctx.measureText(series.label).width;
                 ctx.strokeText(series.label, x+cx-tw-2, pos2);
                 ctx.fillText(series.label, x+cx-tw-2, pos2);
             }
