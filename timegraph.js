@@ -15,9 +15,15 @@ TimeGraph = function() {
         this.canvas.onmousemove = this._onMouseMove.bind(this);
         this.canvas.onmouseup = this._onMouseUp.bind(this);
 
+        this.hcursor = null;
+
         this.options = {
             'hgridFrequency': 100
         };
+
+        this.handlers = {
+            "hcursor": []
+        }
 
         this.mouse = {};
 
@@ -31,6 +37,20 @@ TimeGraph = function() {
         this.draw();
 
     };
+
+
+    TimeGraph.prototype.on = function on(event, handler) {
+        this.handlers[event].push(handler);
+    }
+
+
+    TimeGraph.prototype.emit = function emit(event) {
+        var handlers = this.handlers[event];
+        var args = Array.prototype.slice.call(arguments, 1);
+        for(var k=0; k<handlers.length; k++) {
+            handlers[k].apply(null, args);
+        }
+    }
 
 
     TimeGraph.prototype.LINE_COLORS = [
@@ -170,12 +190,17 @@ TimeGraph = function() {
 
         var start = [ev.pageX, ev.pageY];
 
+        var moved = false;
+
         function mouseMove(e) {
 
             if(e.buttons & 1) {
 
                 var dX = e.pageX - start[0];
                 var dY = e.pageY - start[1];
+
+                if(dX != 0 || dY != 0)
+                  moved = true;
 
                 moveCallback(dX, dY);
 
@@ -187,7 +212,8 @@ TimeGraph = function() {
 
                 document.removeEventListener("mousemove", mouseMove, true);
                 document.removeEventListener("mouseup", mouseUp, true);
-                upCallback();
+
+                upCallback(moved);
 
             }
 
@@ -197,7 +223,7 @@ TimeGraph = function() {
 
             document.removeEventListener("mousemove", mouseMove, true);
             document.removeEventListener("mouseup", mouseUp, true);
-            upCallback();
+            upCallback(moved);
 
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -273,6 +299,13 @@ TimeGraph = function() {
         this.draw();
 
     };
+
+
+    TimeGraph.prototype.setHCursor = function(hcursor) {
+        this.hcursor = hcursor;
+        this.draw();
+        this.emit("hcursor", hcursor);
+    }
 
 
     TimeGraph.prototype.calcHRange = function() {
@@ -374,7 +407,6 @@ TimeGraph = function() {
 
     TimeGraph.prototype._onMouseDown = function(e) {
 
-
         if(e.clientX >= this.mouse.timeAxisX && e.clientX <= this.mouse.timeAxisX + this.mouse.timeAxisCX) {
 
             this.mouse.downHRange = this.hrange;
@@ -392,8 +424,13 @@ TimeGraph = function() {
                     );
 
                 }.bind(this),
-                function() {
-                }
+                function(moved) {
+                    if(!moved) {
+                        var w = (e.clientX - this.mouse.timeAxisX) / this.mouse.timeAxisCX;
+                        var hclicked = (1.0 - w) * this.mouse.downHRange[0] + w * this.mouse.downHRange[1];
+                        this.setHCursor(hclicked);
+                    }
+                }.bind(this)
             );
 
         }
@@ -500,6 +537,12 @@ TimeGraph = function() {
         ctx.fillText(txt[0], x+cx-tw-2, y+cy+12);
         tw = ctx.measureText(txt[1]).width;
         ctx.fillText(txt[1], x+cx-tw-2, y+cy+24);
+
+        // draw h cursor
+        if(this.hcursor && this.hrange[0] <= this.hcursor && this.hcursor <= this.hrange[1]) {
+            ctx.fillStyle = '#FC0';
+            strokeVLine(ctx, x + cx * (this.hcursor - this.hrange[0]) / (this.hrange[1] - this.hrange[0]), y, cy);
+        }
     };
 
 
