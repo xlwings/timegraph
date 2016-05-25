@@ -370,6 +370,12 @@ TimeGraph = function() {
                 }
             }
 
+            for(var axis=0; axis<2; axis++) {
+                var vmargin = 0.05 * (vrange[axis][1] - vrange[axis][0]);
+                vrange[axis][0] -= vmargin;
+                vrange[axis][1] += vmargin;
+            }
+
             vranges.push(vrange);
         }
 
@@ -609,6 +615,9 @@ TimeGraph = function() {
 
             var series = this.series[chart.series[j].id];
 
+            var dotStyle = chart.series[j].dot || "";
+            var lineStyle = chart.series[j].line || "/";
+
             if(series.times.length >= 2) {
 
                 var pathBegun = false;
@@ -622,34 +631,65 @@ TimeGraph = function() {
                     idx1++;
                 if(idx1 == series.times.length)
                     idx1--;
-
+    
+                var prevX, prevY = NaN;
+                var X = 0, Y = NaN;
+                var pxX, pxY, pxPrevX, pxPrevY;
                 for(var i=idx0; i<=idx1; i++) {
-                    var X = series.times[i];
-                    var Y = series.values[i];
+
+                    prevX = X;
+                    prevY = Y;
+                    pxPrevX = pxX;
+                    pxPrevY = pxY;
+
+                    X = series.times[i];
+                    Y = series.values[i];
 
                     if(!isNaN(Y)) {
-                        if(pathBegun) {
-                            ctx.lineTo(
-                                x + cx * (X - hoffset) / hspan,
-                                y + cy * (1.0 - (Y - voffset) / vspan)
-                            );
-                        } else {
-                            pathBegun = true;
+
+                        pxX = x + cx * (X - hoffset) / hspan;
+                        pxY = y + cy * (1.0 - (Y - voffset) / vspan);
+
+                        if(!isNaN(prevY)) {
+
+                            //pxPrevX = x + cx * (prevX - hoffset) / hspan;
+                            //pxPrevY = y + cy * (1.0 - (prevY - voffset) / vspan);
+
                             ctx.beginPath();
                             ctx.moveTo(
-                                x + cx * (series.times[i] - hoffset) / hspan,
-                                y + cy * (1.0 - (series.values[i] - voffset) / vspan)
+                                pxPrevX,
+                                pxPrevY
                             );
-                        }
-                    } else {
-                        if(pathBegun) {
+                            if(lineStyle == "/") {
+                                ctx.lineTo(
+                                    pxX,
+                                    pxY
+                                );
+                            }
+                            else if(lineStyle == "_|") {
+                                ctx.lineTo(
+                                    pxX,
+                                    pxPrevY
+                                );
+                                ctx.lineTo(
+                                    pxX,
+                                    pxY
+                                );
+                            }
+                            else if(lineStyle == "_") {
+                                ctx.lineTo(
+                                    pxX,
+                                    pxPrevY
+                                );
+                            }
                             ctx.stroke();
+
                         }
-                        pathBegun = false;
+
+                        if(dotStyle == '.')
+                            ctx.fillRect(pxX-1, pxY-1, 3, 3);
+
                     }
-                }
-                if(pathBegun) {
-                    ctx.stroke();
                 }
 
             }
